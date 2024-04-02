@@ -23,7 +23,14 @@ version: '3.4'
 
 # ---------------------------------------------------
 
-# services:
+services:
+  api:
+    volumes:
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
+  rag_api:
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
 
 # # USE LIBRECHAT CONFIG FILE
 #   api:
@@ -42,7 +49,7 @@ version: '3.4'
 # # BUILD FROM LATEST IMAGE
 #   api:
 #     image: ghcr.io/danny-avila/librechat-dev:latest
- 
+
 # # BUILD FROM LATEST IMAGE (NUMBERED RELEASE)
 #   api:
 #     image: ghcr.io/danny-avila/librechat:latest
@@ -140,7 +147,7 @@ version: '3.4'
 #      REDIS_PASSWORD: RedisChangeMe
 #    volumes:
 #    - ./redis:/data
-  
+
 # # ADD LITELLM MONITORING
 #  langfuse-server:
 #    image: ghcr.io/langfuse/langfuse:latest
