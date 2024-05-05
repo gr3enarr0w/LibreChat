@@ -3,6 +3,13 @@
 // file deepcode ignore HardcodedNonCryptoSecret: No hardcoded secrets present in this file
 
 export default {
+  com_error_moderation:
+    'It appears that the content submitted has been flagged by our moderation system for not aligning with our community guidelines. We\'re unable to proceed with this specific topic. If you have any other questions or topics you\'d like to explore, please edit your message, or create a new conversation.',
+  com_error_no_user_key: 'No key found. Please provide a key and try again.',
+  com_error_no_base_url: 'No base URL found. Please provide one and try again.',
+  com_error_invalid_user_key: 'Invalid key provided. Please provide a key and try again.',
+  com_error_expired_user_key:
+    'Provided key for {0} expired at {1}. Please provide a key and try again.',
   com_files_no_results: 'No results.',
   com_files_filter: 'Filter files...',
   com_files_number_selected: '{0} of {1} file(s) selected',
@@ -108,6 +115,7 @@ export default {
   com_ui_new_footer: 'All AI conversations in one place.',
   com_ui_enter: 'Enter',
   com_ui_submit: 'Submit',
+  com_ui_none_selected: 'None selected',
   com_ui_upload_success: 'Successfully uploaded file',
   com_ui_upload_error: 'There was an error uploading your file',
   com_ui_upload_invalid: 'Invalid file for upload. Must be an image not exceeding 2 MB',
@@ -117,6 +125,35 @@ export default {
   com_user_message: 'You',
   com_ui_copy_to_clipboard: 'Copy to clipboard',
   com_ui_copied_to_clipboard: 'Copied to clipboard',
+  com_ui_fork_info_1: 'Use this setting to fork messages with the desired behavior.',
+  com_ui_fork_info_2:
+    '"Forking" refers to creating a new conversation that start/end from specific messages in the current conversation, creating a copy according to the options selected.',
+  com_ui_fork_info_3:
+    'The "target message" refers to either the message this popup was opened from, or, if you check "{0}", the latest message in the conversation.',
+  com_ui_fork_info_visible:
+    'This option forks only the visible messages; in other words, the direct path to the target message, without any branches.',
+  com_ui_fork_info_branches:
+    'This option forks the visible messages, along with related branches; in other words, the direct path to the target message, including branches along the path.',
+  com_ui_fork_info_target:
+    'This option forks all messages leading up to the target message, including its neighbors; in other words, all message branches, whether or not they are visible or along the same path, are included.',
+  com_ui_fork_info_start:
+    'If checked, forking will commence from this message to the latest message in the conversation, according to the behavior selected above.',
+  com_ui_fork_info_remember:
+    'Check this to remember the options you select for future usage, making it quicker to fork conversations as preferred.',
+  com_ui_fork_success: 'Successfully forked conversation',
+  com_ui_fork_processing: 'Forking conversation...',
+  com_ui_fork_error: 'There was an error forking the conversation',
+  com_ui_fork_change_default: 'Change default fork option',
+  com_ui_fork_default: 'Use default fork option',
+  com_ui_fork_remember: 'Remember',
+  com_ui_fork_split_target_setting: 'Start fork from target message by default',
+  com_ui_fork_split_target: 'Start fork here',
+  com_ui_fork_remember_checked:
+    'Your selection will be remembered after usage. Change this at any time in the settings.',
+  com_ui_fork_all_target: 'Include all to/from here',
+  com_ui_fork_branches: 'Include related branches',
+  com_ui_fork_visible: 'Visible messages only',
+  com_ui_fork_from_message: 'Select a fork option',
   com_ui_regenerate: 'Regenerate',
   com_ui_continue: 'Continue',
   com_ui_edit: 'Edit',
@@ -125,6 +162,11 @@ export default {
   com_ui_clear: 'Clear',
   com_ui_revoke: 'Revoke',
   com_ui_revoke_info: 'Revoke all user provided credentials',
+  com_ui_import_conversation: 'Import',
+  com_ui_import_conversation_info: 'Import conversations from a JSON file',
+  com_ui_import_conversation_success: 'Conversations imported successfully',
+  com_ui_import_conversation_error: 'There was an error importing your conversations',
+  com_ui_import_conversation_file_type_error: 'Unsupported import type',
   com_ui_confirm_action: 'Confirm Action',
   com_ui_chats: 'chats',
   com_ui_avatar: 'Avatar',
@@ -148,6 +190,8 @@ export default {
     'Uploading "{0}" is taking more time than anticipated. Please wait while the file finishes indexing for retrieval.',
   com_ui_privacy_policy: 'Privacy policy',
   com_ui_terms_of_service: 'Terms of service',
+  com_ui_min_tags: 'Cannot remove more values, a minimum of {0} are required.',
+  com_ui_max_tags: 'Maximum number allowed is {0}, using latest values.',
   com_auth_error_login:
     'Unable to login with the information provided. Please check your credentials and try again.',
   com_auth_error_login_rl:
@@ -217,6 +261,7 @@ export default {
     'WARNING: Misuse of this feature can get you BANNED from using Bing! Click on \'System Message\' for full instructions and the default message if omitted, which is the \'Sydney\' preset that is considered safe.',
   com_endpoint_system_message: 'System Message',
   com_endpoint_message: 'Message',
+  com_endpoint_messages: 'Messages',
   com_endpoint_message_not_appendable: 'Edit your message or Regenerate.',
   com_endpoint_default_blank: 'default: blank',
   com_endpoint_default_false: 'default: false',
@@ -250,6 +295,8 @@ export default {
   com_endpoint_top_p: 'Top P',
   com_endpoint_top_k: 'Top K',
   com_endpoint_max_output_tokens: 'Max Output Tokens',
+  com_endpoint_stop: 'Stop Sequences',
+  com_endpoint_stop_placeholder: 'Separate values by pressing `Enter`',
   com_endpoint_openai_temp:
     'Higher values = more random, while lower values = more focused and deterministic. We recommend altering this or Top P but not both.',
   com_endpoint_openai_max:
@@ -266,6 +313,7 @@ export default {
     'Resend all previously attached files. Note: this will increase token cost and you may experience errors with many attachments.',
   com_endpoint_openai_detail:
     'The resolution for Vision requests. "Low" is cheaper and faster, "High" is more detailed and expensive, and "Auto" will automatically choose between the two based on the image resolution.',
+  com_endpoint_openai_stop: 'Up to 4 sequences where the API will stop generating further tokens.',
   com_endpoint_openai_custom_name_placeholder: 'Set a custom name for the AI',
   com_endpoint_openai_prompt_prefix_placeholder:
     'Set custom instructions to include in System Message. Default: none',

@@ -1,7 +1,9 @@
 /* eslint-disable max-len */
 import { z } from 'zod';
+import type { ZodError } from 'zod';
 import { EModelEndpoint, eModelEndpointSchema } from './schemas';
 import { fileConfigSchema } from './file-config';
+import { specsConfigSchema } from './models';
 import { FileSources } from './types/files';
 import { TModelsConfig } from './types';
 
@@ -25,6 +27,39 @@ export enum SettingsViews {
 }
 
 export const fileSourceSchema = z.nativeEnum(FileSources);
+
+// Helper type to extract the shape of the Zod object schema
+type SchemaShape<T> = T extends z.ZodObject<infer U> ? U : never;
+
+// Helper type to determine the default value or undefined based on whether the field has a default
+type DefaultValue<T> = T extends z.ZodDefault<z.ZodTypeAny>
+  ? ReturnType<T['_def']['defaultValue']>
+  : undefined;
+
+// Extract default values or undefined from the schema shape
+type ExtractDefaults<T> = {
+  [P in keyof T]: DefaultValue<T[P]>;
+};
+
+export type SchemaDefaults<T> = ExtractDefaults<SchemaShape<T>>;
+
+export type TConfigDefaults = SchemaDefaults<typeof configSchema>;
+
+export function getSchemaDefaults<Schema extends z.AnyZodObject>(
+  schema: Schema,
+): ExtractDefaults<SchemaShape<Schema>> {
+  const shape = schema.shape;
+  const entries = Object.entries(shape).map(([key, value]) => {
+    if (value instanceof z.ZodDefault) {
+      // Extract default value if it exists
+      return [key, value._def.defaultValue()];
+    }
+    return [key, undefined];
+  });
+
+  // Create the object with the right types
+  return Object.fromEntries(entries) as ExtractDefaults<SchemaShape<Schema>>;
+}
 
 export const modelConfigSchema = z
   .object({
@@ -79,6 +114,11 @@ export type TValidatedAzureConfig = {
   modelNames: string[];
   modelGroupMap: TAzureModelGroupMap;
   groupMap: TAzureGroupMap;
+};
+
+export type TAzureConfigValidationResult = TValidatedAzureConfig & {
+  isValid: boolean;
+  errors: (ZodError | string)[];
 };
 
 export enum Capabilities {
@@ -173,10 +213,18 @@ export const azureEndpointSchema = z
   );
 
 export type TAzureConfig = Omit<z.infer<typeof azureEndpointSchema>, 'groups'> &
-  TValidatedAzureConfig;
+  TAzureConfigValidationResult;
 
 export const rateLimitSchema = z.object({
   fileUploads: z
+    .object({
+      ipMax: z.number().optional(),
+      ipWindowInMinutes: z.number().optional(),
+      userMax: z.number().optional(),
+      userWindowInMinutes: z.number().optional(),
+    })
+    .optional(),
+  conversationsImport: z
     .object({
       ipMax: z.number().optional(),
       ipWindowInMinutes: z.number().optional(),
@@ -194,9 +242,10 @@ export enum EImageOutputType {
 
 export const configSchema = z.object({
   version: z.string(),
-  cache: z.boolean().optional().default(true),
+  cache: z.boolean().default(true),
   secureImageLinks: z.boolean().optional(),
-  imageOutputType: z.nativeEnum(EImageOutputType).optional().default(EImageOutputType.PNG),
+  imageOutputType: z.nativeEnum(EImageOutputType).default(EImageOutputType.PNG),
+  filteredTools: z.array(z.string()).optional(),
   interface: z
     .object({
       privacyPolicy: z
@@ -211,17 +260,29 @@ export const configSchema = z.object({
           openNewTab: z.boolean().optional(),
         })
         .optional(),
+      endpointsMenu: z.boolean().optional(),
+      modelSelect: z.boolean().optional(),
+      parameters: z.boolean().optional(),
+      sidePanel: z.boolean().optional(),
+      presets: z.boolean().optional(),
     })
-    .optional(),
-  fileStrategy: fileSourceSchema.optional(),
+    .default({
+      endpointsMenu: true,
+      modelSelect: true,
+      parameters: true,
+      sidePanel: true,
+      presets: true,
+    }),
+  fileStrategy: fileSourceSchema.default(FileSources.local),
   registration: z
     .object({
       socialLogins: z.array(z.string()).optional(),
       allowedDomains: z.array(z.string()).optional(),
     })
-    .optional(),
+    .default({ socialLogins: defaultSocialLogins }),
   rateLimits: rateLimitSchema.optional(),
   fileConfig: fileConfigSchema.optional(),
+  modelSpecs: specsConfigSchema.optional(),
   endpoints: z
     .object({
       [EModelEndpoint.azureOpenAI]: azureEndpointSchema.optional(),
@@ -235,19 +296,23 @@ export const configSchema = z.object({
     .optional(),
 });
 
+export const getConfigDefaults = () => getSchemaDefaults(configSchema);
+
 export type TCustomConfig = z.infer<typeof configSchema>;
 
 export enum KnownEndpoints {
-  mistral = 'mistral',
-  shuttleai = 'shuttleai',
-  openrouter = 'openrouter',
-  groq = 'groq',
   anyscale = 'anyscale',
-  fireworks = 'fireworks',
-  ollama = 'ollama',
-  perplexity = 'perplexity',
-  'together.ai' = 'together.ai',
+  apipie = 'apipie',
   cohere = 'cohere',
+  fireworks = 'fireworks',
+  groq = 'groq',
+  mistral = 'mistral',
+  mlx = 'mlx',
+  ollama = 'ollama',
+  openrouter = 'openrouter',
+  perplexity = 'perplexity',
+  shuttleai = 'shuttleai',
+  'together.ai' = 'together.ai',
 }
 
 export enum FetchTokenConfig {
@@ -280,14 +345,16 @@ export const alternateName = {
 
 export const defaultModels = {
   [EModelEndpoint.assistants]: [
+    'gpt-3.5-turbo',
     'gpt-3.5-turbo-0125',
+    'gpt-4-turbo',
+    'gpt-4-turbo-2024-04-09',
     'gpt-4-0125-preview',
     'gpt-4-turbo-preview',
     'gpt-4-1106-preview',
     'gpt-3.5-turbo-1106',
     'gpt-3.5-turbo-16k-0613',
     'gpt-3.5-turbo-16k',
-    'gpt-3.5-turbo',
     'gpt-4',
     'gpt-4-0314',
     'gpt-4-32k-0314',
@@ -322,6 +389,8 @@ export const defaultModels = {
   ],
   [EModelEndpoint.openAI]: [
     'gpt-3.5-turbo-0125',
+    'gpt-4-turbo',
+    'gpt-4-turbo-2024-04-09',
     'gpt-3.5-turbo-16k-0613',
     'gpt-3.5-turbo-16k',
     'gpt-4-turbo-preview',
@@ -391,6 +460,7 @@ export const supportsBalanceCheck = {
 
 export const visionModels = [
   'gpt-4-vision',
+  'llava',
   'llava-13b',
   'gemini-pro-vision',
   'claude-3',
@@ -476,6 +546,15 @@ export enum CacheKeys {
    * Key for the override config cache.
    */
   OVERRIDE_CONFIG = 'overrideConfig',
+  /**
+   * Key for the bans cache.
+   */
+  BANS = 'bans',
+  /**
+   * Key for the encoded domains cache.
+   * Used by Azure OpenAI Assistants.
+   */
+  ENCODED_DOMAINS = 'encoded_domains',
 }
 
 /**
@@ -494,6 +573,36 @@ export enum ViolationTypes {
    * Token Limit Violation.
    */
   TOKEN_BALANCE = 'token_balance',
+  /**
+   * An issued ban.
+   */
+  BAN = 'ban',
+}
+
+/**
+ * Enum for error message types that are not "violations" as above, used to identify client-facing errors.
+ */
+export enum ErrorTypes {
+  /**
+   * No User-provided Key.
+   */
+  NO_USER_KEY = 'no_user_key',
+  /**
+   * Expired User-provided Key.
+   */
+  EXPIRED_USER_KEY = 'expired_user_key',
+  /**
+   * Invalid User-provided Key.
+   */
+  INVALID_USER_KEY = 'invalid_user_key',
+  /**
+   * No Base URL Provided.
+   */
+  NO_BASE_URL = 'no_base_url',
+  /**
+   * Moderation error
+   */
+  MODERATION = 'moderation',
 }
 
 /**
@@ -545,6 +654,10 @@ export enum SettingsTabValues {
    */
   GENERAL = 'general',
   /**
+   * Tab for Messages Settings
+   */
+  MESSAGES = 'messages',
+  /**
    * Tab for Beta Features
    */
   BETA = 'beta',
@@ -558,22 +671,52 @@ export enum SettingsTabValues {
   ACCOUNT = 'account',
 }
 
-/**
- * Enum for app-wide constants
- */
+/** Enum for app-wide constants */
 export enum Constants {
-  /**
-   * Key for the app's version.
-   */
-  VERSION = 'v0.7.0',
-  /**
-   * Key for the Custom Config's version (librechat.yaml).
-   */
-  CONFIG_VERSION = '1.0.6',
-  /**
-   * Standard value for the first message's `parentMessageId` value, to indicate no parent exists.
-   */
+  /** Key for the app's version. */
+  VERSION = 'v0.7.1',
+  /** Key for the Custom Config's version (librechat.yaml). */
+  CONFIG_VERSION = '1.0.9',
+  /** Standard value for the first message's `parentMessageId` value, to indicate no parent exists. */
   NO_PARENT = '00000000-0000-0000-0000-000000000000',
+  /** Fixed, encoded domain length for Azure OpenAI Assistants Function name parsing. */
+  ENCODED_DOMAIN_LENGTH = 10,
+  /** Identifier for using current_model in multi-model requests. */
+  CURRENT_MODEL = 'current_model',
+}
+
+export enum LocalStorageKeys {
+  /** Key for the admin defined App Title */
+  APP_TITLE = 'appTitle',
+  /** Key for the last conversation setup. */
+  LAST_CONVO_SETUP = 'lastConversationSetup',
+  /** Key for the last BingAI Settings */
+  LAST_BING = 'lastBingSettings',
+  /** Key for the last selected model. */
+  LAST_MODEL = 'lastSelectedModel',
+  /** Key for the last selected tools. */
+  LAST_TOOLS = 'lastSelectedTools',
+  /** Key for the last selected spec by name*/
+  LAST_SPEC = 'lastSelectedSpec',
+  /** Key for temporary files to delete */
+  FILES_TO_DELETE = 'filesToDelete',
+  /** Prefix key for the last selected assistant ID by index */
+  ASST_ID_PREFIX = 'assistant_id__',
+  /** Key for the last selected fork setting */
+  FORK_SETTING = 'forkSetting',
+  /** Key for remembering the last selected option, instead of manually selecting */
+  REMEMBER_FORK_OPTION = 'rememberForkOption',
+  /** Key for remembering the split at target fork option modifier */
+  FORK_SPLIT_AT_TARGET = 'splitAtTarget',
+}
+
+export enum ForkOptions {
+  /** Key for direct path option */
+  DIRECT_PATH = 'directPath',
+  /** Key for including branches */
+  INCLUDE_BRANCHES = 'includeBranches',
+  /** Key for target level fork (default) */
+  TARGET_LEVEL = '',
 }
 
 /**
@@ -600,38 +743,4 @@ export enum CohereConstants {
    * Title message as required by Cohere
    */
   TITLE_MESSAGE = 'TITLE:',
-}
-
-export const defaultOrderQuery: {
-  order: 'desc';
-  limit: 100;
-} = {
-  order: 'desc',
-  limit: 100,
-};
-
-export enum AssistantStreamEvents {
-  ThreadCreated = 'thread.created',
-  ThreadRunCreated = 'thread.run.created',
-  ThreadRunQueued = 'thread.run.queued',
-  ThreadRunInProgress = 'thread.run.in_progress',
-  ThreadRunRequiresAction = 'thread.run.requires_action',
-  ThreadRunCompleted = 'thread.run.completed',
-  ThreadRunFailed = 'thread.run.failed',
-  ThreadRunCancelling = 'thread.run.cancelling',
-  ThreadRunCancelled = 'thread.run.cancelled',
-  ThreadRunExpired = 'thread.run.expired',
-  ThreadRunStepCreated = 'thread.run.step.created',
-  ThreadRunStepInProgress = 'thread.run.step.in_progress',
-  ThreadRunStepCompleted = 'thread.run.step.completed',
-  ThreadRunStepFailed = 'thread.run.step.failed',
-  ThreadRunStepCancelled = 'thread.run.step.cancelled',
-  ThreadRunStepExpired = 'thread.run.step.expired',
-  ThreadRunStepDelta = 'thread.run.step.delta',
-  ThreadMessageCreated = 'thread.message.created',
-  ThreadMessageInProgress = 'thread.message.in_progress',
-  ThreadMessageCompleted = 'thread.message.completed',
-  ThreadMessageIncomplete = 'thread.message.incomplete',
-  ThreadMessageDelta = 'thread.message.delta',
-  ErrorEvent = 'error',
 }
